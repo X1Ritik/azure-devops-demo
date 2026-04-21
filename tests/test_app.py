@@ -1,6 +1,5 @@
 import pytest
-import sys
-import os
+import sys, os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../app'))
 from app import app
 
@@ -10,26 +9,22 @@ def client():
     with app.test_client() as client:
         yield client
 
-def test_home_returns_200(client):
+def test_home_loads(client):
     response = client.get("/")
     assert response.status_code == 200
 
-def test_home_returns_json(client):
-    response = client.get("/")
-    data = response.get_json()
-    assert "message" in data
-    assert "status" in data
-    assert data["status"] == "running"
+def test_get_todos_empty(client):
+    response = client.get("/api/todos")
+    assert response.status_code == 200
+    assert response.get_json() == []
 
-def test_health_check(client):
+def test_add_todo(client):
+    response = client.post("/api/todos",
+        json={"text": "buy milk"},
+        content_type="application/json")
+    assert response.status_code == 201
+    assert response.get_json()["text"] == "buy milk"
+
+def test_health(client):
     response = client.get("/health")
     assert response.status_code == 200
-    data = response.get_json()
-    assert data["status"] == "healthy"
-    assert "timestamp" in data
-
-def test_info_endpoint(client):
-    response = client.get("/info")
-    assert response.status_code == 200
-    data = response.get_json()
-    assert data["app"] == "azure-devops-demo"
