@@ -1,4 +1,4 @@
-name: CI/CD Pipeline → Azure
+name: CI/CD Pipeline to Azure
 
 on:
   push:
@@ -7,17 +7,14 @@ on:
     branches: [ main ]
 
 env:
-  REGISTRY: ${{ secrets.ACR_LOGIN_SERVER }}        # e.g. myregistry.azurecr.io
+  REGISTRY: ${{ secrets.ACR_LOGIN_SERVER }}
   IMAGE_NAME: azure-devops-demo
-  AZURE_WEBAPP_NAME: ${{ secrets.AZURE_WEBAPP_NAME }}  # your App Service name
 
 jobs:
 
-  # ─────────────────────────────────────────
   # JOB 1: Run Tests
-  # ─────────────────────────────────────────
   test:
-    name: 🧪 Run Tests
+    name: Run Tests
     runs-on: ubuntu-latest
 
     steps:
@@ -30,21 +27,17 @@ jobs:
           python-version: "3.11"
 
       - name: Install dependencies
-        run: |
-          pip install -r app/requirements.txt
+        run: pip install -r app/requirements.txt
 
       - name: Run unit tests
-        run: |
-          pytest tests/ -v
+        run: pytest tests/ -v
 
-  # ─────────────────────────────────────────
   # JOB 2: Build & Push Docker Image
-  # ─────────────────────────────────────────
   build:
-    name: 🐳 Build & Push Docker Image
+    name: Build and Push Docker Image
     runs-on: ubuntu-latest
-    needs: test                          # only runs if tests pass
-    if: github.ref == 'refs/heads/main'  # only on main branch
+    needs: test
+    if: github.ref == 'refs/heads/main'
 
     steps:
       - name: Checkout code
@@ -63,19 +56,14 @@ jobs:
           context: .
           push: true
           tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
-          build-args: |
-            APP_VERSION=${{ github.sha }}
-            DEPLOY_TIME=${{ github.run_id }}
+            ${{ secrets.ACR_LOGIN_SERVER }}/azure-devops-demo:latest
+            ${{ secrets.ACR_LOGIN_SERVER }}/azure-devops-demo:${{ github.sha }}
 
-  # ─────────────────────────────────────────
   # JOB 3: Deploy to Azure App Service
-  # ─────────────────────────────────────────
   deploy:
-    name: 🚀 Deploy to Azure
+    name: Deploy to Azure
     runs-on: ubuntu-latest
-    needs: build   # only runs after image is pushed
+    needs: build
 
     steps:
       - name: Log in to Azure
@@ -86,12 +74,12 @@ jobs:
       - name: Deploy to Azure App Service
         uses: azure/webapps-deploy@v3
         with:
-          app-name: ${{ env.AZURE_WEBAPP_NAME }}
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          app-name: ritikapp2026
+          images: ${{ secrets.ACR_LOGIN_SERVER }}/azure-devops-demo:${{ github.sha }}
 
-      - name: Verify deployment (health check)
+      - name: Verify deployment
         run: |
           sleep 20
-          curl --fail https://${{ env.AZURE_WEBAPP_NAME }}.azurewebsites.net/health \
-            && echo "✅ Deployment successful!" \
-            || echo "⚠️ Health check failed"
+          curl --fail https://ritikapp2026.azurewebsites.net/health \
+            && echo "Deployment successful!" \
+            || echo "Health check failed"
